@@ -1,0 +1,55 @@
+import board
+import neopixel
+import time
+import digitalio
+import busio
+import adafruit_requests as requests
+import serial
+
+# NeoPixel configuration
+NUM_PIXELS = 10
+NEOPIXEL_PIN = board.NEOPIXEL
+
+# Define colors
+BLACK = (0, 0, 0)
+GREEN = (0, 255, 0)
+
+# Initialize NeoPixel strip
+pixels = neopixel.NeoPixel(NEOPIXEL_PIN, NUM_PIXELS, brightness=0.3, auto_write=False)
+
+# Define serial connection to Klipper
+SERIAL_PORT = "/dev/ttyACM0"  # Adjust this to match your device
+BAUD_RATE = 115200
+ser = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=1)
+
+# Function to fetch printer status from Klipper
+def get_printer_status():
+    try:
+        ser.write(b'@status\n')
+        response = ser.readline().decode('utf-8').strip()
+        if response.startswith("status:"):
+            printer_status = response.split(":")[1].strip()
+            return printer_status
+        else:
+            return None
+    except Exception as e:
+        print("Error fetching printer status:", e)
+        return None
+
+# Main loop
+while True:
+    printer_status = get_printer_status()
+    if printer_status == "Printing":
+        # Display rainbow when printing
+        for i in range(NUM_PIXELS):
+            hue = int((i / NUM_PIXELS) * 255)
+            pixels[i] = neopixel.colorwheel(hue)
+        pixels.show()
+    else:
+        # Display solid green when in standby mode
+        for i in range(NUM_PIXELS):
+            pixels[i] = GREEN
+        pixels.show()
+    
+    # Check printer status every 5 seconds
+    time.sleep(5)
